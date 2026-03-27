@@ -2,20 +2,16 @@ const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    placeId: {
+    place: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Place",
       required: true,
     },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
-    content: { type: String, required: true },
-    images: [{ type: String }], // Link ảnh review
-    isFlagged: { type: Boolean, default: false }, // Đánh dấu nếu có dấu hiệu buff bẩn
+    comment: { type: String, required: true },
+    media: [{ type: String }], // Lưu mảng link ảnh/video (Rule quan trọng nhất)
+    helpfulUps: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Danh sách người nhấn Hữu ích
   },
   { timestamps: true },
 );

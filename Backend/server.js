@@ -8,7 +8,7 @@ require("dotenv").config();
 
 const authRoutes = require("./src/routes/authRoutes");
 const userRoutes = require("./src/routes/userRoutes");
-
+const reviewRoutes = require("./src/routes/reviewRoutes");
 const app = express();
 
 app.use(helmet()); // Che giấu thông tin server
@@ -31,13 +31,14 @@ mongoose
       " LỖI KẾT NỐI MONGODB. Vui lòng kiểm tra lại file .env:",
       err,
     );
-    process.exit(1); // Dừ
+    process.exit(1);
   });
 
-// 3. KHAI BÁO CÁC TUYẾN ĐƯỜNG API (ROUTES)
+//ROUTES
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.get("/", (req, res) => {
   res.json({

@@ -18,10 +18,10 @@ const userSchema = new mongoose.Schema(
     otpSecret: { type: String }, // Dành cho xác thực đa yếu tố (MFA) sau này
     isVerified: {
       type: Boolean,
-      default: false, // Mới đăng ký thì mặc định là chưa xác thực
+      default: false,
     },
     verificationCode: String, // Lưu mã OTP 6 số
-    verificationCodeExpires: Date, // Thời gian hết hạn của mã OTP
+    verificationCodeExpires: Date,
     phoneNumber: {
       type: String,
       default: "",

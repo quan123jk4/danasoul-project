@@ -1,56 +1,121 @@
 const User = require("../Models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 
-// 1. CHỨC NĂNG ĐĂNG KÝ (REGISTER)
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// Đăng kí
 exports.register = async (req, res) => {
   try {
     const { email, password, fullName, role } = req.body;
 
-    // Kiểm tra xem email đã tồn tại chưa
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email này đã được sử dụng!" });
     }
 
-    // Băm (Hash) mật khẩu - Tăng độ bảo mật (chuẩn AES/Bcrypt)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Tạo user mới
+    // 1. Tạo ngẫu nhiên mã OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 2. Set thời gian hết hạn là 10 phút tính từ hiện tại
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    // 3. Tạo user mới (với trạng thái chưa xác thực)
     const newUser = await User.create({
       email,
       password: hashedPassword,
       fullName,
-      role: role || "TOURIST", // Mặc định là Tourist nếu không truyền
+      role: role || "TOURIST",
+      verificationCode: otp,
+      verificationCodeExpires: otpExpires,
     });
 
+    // 4. Soạn nội dung và gửi Email
+    const mailOptions = {
+      from: `"DaNang Travel App" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Xác thực tài khoản của bạn",
+      html: `
+        <h2>Chào ${fullName},</h2>
+        <p>Cảm ơn bạn đã tham gia ứng dụng du lịch của chúng tôi.</p>
+        <p>Mã xác thực (OTP) của bạn là: <b style="font-size: 24px; color: blue;">${otp}</b></p>
+        <p>Mã này sẽ hết hạn sau 10 phút.</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
     res.status(201).json({
-      message: "Đăng ký tài khoản thành công!",
-      user: {
-        id: newUser._id,
-        email: newUser.email,
-        fullName: newUser.fullName,
-        role: newUser.role,
-      },
+      message:
+        "Đăng ký thành công! Vui lòng kiểm tra email để lấy mã xác thực.",
+      userId: newUser._id,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+// 4. CHỨC NĂNG XÁC THỰC EMAIL BẰNG MÃ OTP
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Tìm user bằng email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản!" });
+    }
+
+    // Kiểm tra xem user đã xác thực trước đó chưa
+    if (user.isVerified) {
+      return res
+        .status(400)
+        .json({ message: "Tài khoản này đã được xác thực rồi!" });
+    }
+
+    // Kiểm tra mã OTP và thời gian hết hạn
+    if (user.verificationCode !== otp) {
+      return res.status(400).json({ message: "Mã OTP không chính xác!" });
+    }
+
+    if (user.verificationCodeExpires < new Date()) {
+      return res
+        .status(400)
+        .json({ message: "Mã OTP đã hết hạn! Vui lòng yêu cầu gửi lại." });
+    }
+
+    // Nếu đúng hết -> Cập nhật trạng thái thành công
+    user.isVerified = true;
+    user.verificationCode = undefined; // Xóa mã đi cho bảo mật
+    user.verificationCodeExpires = undefined;
+    await user.save();
+
+    res.status(200).json({
+      message: "Xác thực tài khoản thành công! Bạn có thể đăng nhập.",
     });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
-// 2. CHỨC NĂNG ĐĂNG NHẬP (LOGIN)
+// Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Tìm user theo email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "Tài khoản không tồn tại!" });
     }
-
-    // Kiểm tra xem tài khoản có đang bị khóa (Brute Force) không
     if (user.isLocked) {
       return res.status(403).json({
         message:
@@ -58,13 +123,11 @@ exports.login = async (req, res) => {
       });
     }
 
-    // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      // Tăng số lần nhập sai lên 1
       user.failedLoginAttempts += 1;
       if (user.failedLoginAttempts >= 5) {
-        user.isLocked = true; // Khóa luôn nếu sai 5 lần
+        user.isLocked = true;
       }
       await user.save();
 
@@ -73,7 +136,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Đăng nhập thành công -> Reset lại số lần nhập sai về 0
     user.failedLoginAttempts = 0;
     await user.save();
 
@@ -81,7 +143,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }, // Token sống được 1 ngày
+      { expiresIn: "1d" },
     );
 
     res.status(200).json({

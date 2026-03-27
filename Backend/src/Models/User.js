@@ -17,7 +17,14 @@ const userSchema = new mongoose.Schema(
     failedLoginAttempts: { type: Number, default: 0 },
     isLocked: { type: Boolean, default: false },
     otpSecret: { type: String }, // Dành cho xác thực đa yếu tố (MFA) sau này
+    isVerified: {
+      type: Boolean,
+      default: false, // Mới đăng ký thì mặc định là chưa xác thực
+    },
+    verificationCode: String, // Lưu mã OTP 6 số
+    verificationCodeExpires: Date, // Thời gian hết hạn của mã OTP
   },
+
   { timestamps: true },
 );
 

@@ -1,0 +1,25 @@
+# Bỏ qua tất cả thư viện nặng ở bất kỳ thư mục con nào (Frontend/Backend)
+node_modules/
+
+# Bỏ qua TẤT CẢ các file chứa chìa khóa bí mật
+.env
+.env.local
+.env.development
+
+# Bỏ qua các thư mục build của Frontend sau này (React/Vue)
+dist/
+build/
+.next/
+
+# Bỏ qua file rác của hệ điều hành
+.DS_Store
+Thumbs.db
+# --- BỎ QUA RÁC CỦA PYTHON (Thư mục AI) ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Bỏ qua thư mục môi trường ảo Python (nếu sau này bạn có tạo)
+venv/
+env/
+.venv/

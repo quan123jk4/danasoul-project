@@ -9,6 +9,7 @@ require("dotenv").config();
 const authRoutes = require("./src/routes/authRoutes");
 const userRoutes = require("./src/routes/userRoutes");
 const reviewRoutes = require("./src/routes/reviewRoutes");
+const placeRoutes = require("./src/routes/placeRoutes");
 const app = express();
 
 app.use(helmet()); // Che giấu thông tin server
@@ -39,6 +40,7 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/places", placeRoutes);
 
 app.get("/", (req, res) => {
   res.json({

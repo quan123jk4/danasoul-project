@@ -1,15 +1,14 @@
 const jwt = require("jsonwebtoken");
 const User = require("../Models/User");
 
+//check xem user co dang nhap tai khoan khong
 exports.protect = async (req, res, next) => {
   let token;
-
-  // 1. Kiểm tra xem người dùng có gửi Token lên không (thường nằm ở Header)
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
-    token = req.headers.authorization.split(" ")[1]; // Lấy phần mã Token phía sau chữ "Bearer "
+    token = req.headers.authorization.split(" ")[1];
   }
 
   if (!token) {
@@ -19,16 +18,14 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // 2. Dịch ngược Token để lấy ID của user
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // 3. Tìm user trong Database và gắn vào req để các hàm sau sử dụng (loại bỏ password cho an toàn)
     req.user = await User.findById(decoded.id).select("-password");
-    next(); // Cho phép đi tiếp vào Controller
+    next();
   } catch (error) {
     res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn!" });
   }
 };
+//check xem user co phai la admin hay khong
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     const allowedRoles = roles.map((r) => r.toLowerCase());

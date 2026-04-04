@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { escapeRegex, removeVietnameseTones } = require("../utils/searchHelper");
 
 const placeSchema = new mongoose.Schema(
   {
@@ -96,10 +97,18 @@ const placeSchema = new mongoose.Schema(
       type: Number,
       default: 0, // AI sẽ ưu tiên gợi ý nơi có score cao
     },
+    searchString: {
+      type: String,
+      select: false, // Giấu đi không cho Frontend thấy
+    },
   },
   {
     timestamps: true,
   },
 );
 placeSchema.index({ location: "2dsphere" });
+placeSchema.pre("save", async function () {
+  const combinedText = `${this.name} ${this.description}`;
+  this.searchString = removeVietnameseTones(combinedText);
+});
 module.exports = mongoose.model("Place", placeSchema);

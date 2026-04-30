@@ -12,6 +12,8 @@ const reviewSchema = new mongoose.Schema(
     comment: { type: String, required: true },
     media: [{ type: String }], // Lưu mảng link ảnh/video (Rule quan trọng nhất)
     helpfulUps: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Danh sách người nhấn Hữu ích
+    isApproved: { type: Boolean, default: false },
+    adminReply: { type: String, default: "" },
   },
   { timestamps: true },
 );

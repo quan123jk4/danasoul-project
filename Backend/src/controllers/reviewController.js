@@ -127,3 +127,72 @@ exports.deleteReview = async (req, res) => {
       .json({ success: false, message: "Lỗi hệ thống", error: error.message });
   }
 };
+exports.getAllReviews = async (req, res) => {
+  try {
+    // Kéo toàn bộ data từ DB, sắp xếp theo thời gian mới nhất (createdAt: -1)
+    const reviews = await Review.find()
+      .populate("user", "username fullName avatar email") // Lấy thông tin người viết
+      .populate("place", "name category address") // Lấy thông tin địa điểm
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: reviews.length,
+      data: reviews,
+    });
+  } catch (error) {
+    console.error("Lỗi get all reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi hệ thống khi lấy danh sách đánh giá",
+      error: error.message,
+    });
+  }
+};
+exports.toggleApproveReview = async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy đánh giá!" });
+    }
+
+    // Đảo ngược trạng thái (Đang false thành true, đang true thành false)
+    review.isApproved = !review.isApproved;
+    await review.save();
+
+    res.status(200).json({
+      success: true,
+      message: review.isApproved
+        ? "Đã duyệt bài đánh giá!"
+        : "Đã gỡ bài đánh giá!",
+      data: review,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+exports.replyReview = async (req, res) => {
+  try {
+    const { adminReply } = req.body;
+    const review = await Review.findByIdAndUpdate(
+      req.params.id,
+      { adminReply: adminReply },
+      { new: true }, // Trả về data mới sau khi update
+    )
+      .populate("user")
+      .populate("place");
+
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy đánh giá!" });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Đã lưu phản hồi!", data: review });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -93,12 +93,12 @@ const CheckinPage = () => {
 
     const fetchPlaces = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/v1/places");
+        const res = await fetch(
+          "http://localhost:5000/api/v1/places?limit=all",
+        );
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setPlacesList(data.data);
-          setFormData((prev) => ({ ...prev, placeId: data.data[0]._id }));
-          setSearchTerm(data.data[0].name);
         }
       } catch (error) {
         console.error("Lỗi lấy danh sách địa điểm:", error);
@@ -180,11 +180,9 @@ const CheckinPage = () => {
       const checkinResult = await checkinResponse.json();
 
       if (checkinResponse.ok && checkinResult.success) {
-        // BƯỚC 2: NẾU USER CÓ VIẾT CẢM NGHĨ, TỰ ĐỘNG BẮN LUÔN API REVIEW
         let reviewAdded = false;
         if (formData.caption && formData.caption.trim() !== "") {
           try {
-            // LƯU Ý: Tùy theo router ở backend ông map là gì, tôi giả định là /api/v1/reviews
             const reviewResponse = await fetch(
               "http://localhost:5000/api/v1/reviews",
               {
@@ -391,7 +389,11 @@ const CheckinPage = () => {
                     setSearchTerm(e.target.value);
                     setIsDropdownOpen(true);
                   }}
-                  onClick={() => setIsDropdownOpen(true)}
+                  onClick={() => {
+                    // BÍ QUYẾT LÀ ĐÂY: Xóa chữ đang có khi click vào để show TẤT CẢ danh sách
+                    setSearchTerm("");
+                    setIsDropdownOpen(true);
+                  }}
                   placeholder="Đang tải danh sách..."
                   className="w-full bg-[#E5EDF4]/50 border border-transparent text-[#002045] text-sm rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium cursor-text"
                 />

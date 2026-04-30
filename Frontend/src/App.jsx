@@ -20,7 +20,8 @@ import HeritagePage from "./screens/user/HeritagePage";
 import AdminHomePage from "./screens/admin/AdminHomePage";
 import AdminUserPage from "./screens/admin/AdminUserPage";
 import AdminPlacePage from "./screens/admin/AdminPlacePage";
-
+import AdminReviewPage from "./screens/admin/AdminReviewPage";
+import AdminVoucherPage from "./screens/admin/AdminVoucherPage";
 function App() {
   return (
     // Bọc toàn bộ ứng dụng bằng AuthProvider để quản lý state đăng nhập
@@ -72,6 +73,8 @@ function App() {
             <Route path="/admin" element={<AdminHomePage />} />
             <Route path="/admin/users" element={<AdminUserPage />} />
             <Route path="/admin/places" element={<AdminPlacePage />} />
+            <Route path="/admin/reviews" element={<AdminReviewPage />} />
+            <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
           </Route>
 
           {/* Redirect và xử lý trang không tồn tại */}

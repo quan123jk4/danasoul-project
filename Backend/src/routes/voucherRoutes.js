@@ -11,7 +11,12 @@ router.post(
   authorize("ADMIN"),
   voucherController.createVoucher,
 );
-
+router.get(
+  "/admin/list",
+  protect,
+  authorize("ADMIN"),
+  voucherController.getAdminVouchers,
+);
 // Link API: http://localhost:5000/api/v1/vouchers/redeem
 router.post("/redeem", protect, voucherController.redeemVoucher);
 router.get("/list", voucherController.getAllVouchers);

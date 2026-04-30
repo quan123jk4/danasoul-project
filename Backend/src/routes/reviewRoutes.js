@@ -12,5 +12,7 @@ router.put("/:id", protect, reviewController.updateReview);
 
 // Xóa review (cần truyền ID của review vào URL)
 router.delete("/:id", protect, reviewController.deleteReview);
-
+router.get("/", protect, reviewController.getAllReviews);
+router.patch("/:id/approve", protect, reviewController.toggleApproveReview);
+router.patch("/:id/reply", reviewController.replyReview);
 module.exports = router;

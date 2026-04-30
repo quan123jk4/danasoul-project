@@ -83,7 +83,7 @@ exports.createPlace = async (req, res) => {
 // 2. [GET] Lấy danh sách địa điểm (Tìm quanh đây = GPS)
 exports.getAllPlaces = async (req, res) => {
   try {
-    const { keyword, category, lat, lng } = req.query;
+    const { keyword, category, lat, lng, limit } = req.query;
     let query = {};
 
     if (keyword) query.name = { $regex: keyword, $options: "i" };
@@ -92,6 +92,15 @@ exports.getAllPlaces = async (req, res) => {
     let userLat = parseFloat(lat);
     let userLng = parseFloat(lng);
     let isDefaultLocation = false;
+    if (limit === "all") {
+      let places = await Place.find(query).sort({ createdAt: -1 });
+      return res.status(200).json({
+        success: true,
+        count: places.length,
+        isDefaultLocation: false,
+        data: places,
+      });
+    }
 
     if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
       userLat = 16.0614;

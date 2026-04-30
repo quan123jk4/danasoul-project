@@ -51,7 +51,7 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/places", placeRoutes);
 app.use("/api/v1/checkin", checkinRoutes);
-app.use("/api/v1/voucher", voucherRoutes);
+app.use("/api/v1/vouchers", voucherRoutes);
 app.use("/api/v1", aiRoutes);
 app.use("/api/v1/admin", adminRoutes);
 

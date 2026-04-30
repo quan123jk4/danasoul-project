@@ -12,12 +12,10 @@ exports.redeemVoucher = async (req, res) => {
     // 1. Kiểm tra voucher có tồn tại không
     const voucher = await Voucher.findById(voucherId);
     if (!voucher || !voucher.isActive) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Voucher không tồn tại hoặc đã hết hạn!",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Voucher không tồn tại hoặc đã hết hạn!",
+      });
     }
 
     // --- ĐOẠN FIX LỖI: KIỂM TRA XEM USER ĐÃ ĐỔI NHƯNG CHƯA DÙNG CHƯA ---
@@ -85,22 +83,32 @@ exports.createVoucher = async (req, res) => {
 // [GET] Lấy danh sách tất cả Voucher đang hoạt động
 exports.getAllVouchers = async (req, res) => {
   try {
-    // Chỉ lấy những voucher có trạng thái isActive là true
     const vouchers = await Voucher.find({ isActive: true }).sort({
       pointsRequired: 1,
     });
-
     res.status(200).json({
       success: true,
       count: vouchers.length,
       data: vouchers,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Không thể lấy danh sách Voucher",
-      error: error.message,
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi Server", error: error.message });
+  }
+};
+exports.getAdminVouchers = async (req, res) => {
+  try {
+    const vouchers = await Voucher.find().sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      count: vouchers.length,
+      data: vouchers,
     });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi Server", error: error.message });
   }
 };
 

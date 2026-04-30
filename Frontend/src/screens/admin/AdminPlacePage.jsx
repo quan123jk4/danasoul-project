@@ -48,6 +48,13 @@ const PREDEFINED_TAGS = [
   "Khám phá",
   "Chợ đêm",
 ];
+const formatCurrency = (value) => {
+  if (!value) return "";
+  // Xóa hết tất cả các ký tự không phải là số
+  const numericValue = value.toString().replace(/\D/g, "");
+  // Chèn dấu chấm vào mỗi 3 chữ số
+  return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
 
 export default function AdminPlacePage() {
   const { user } = useAuth();
@@ -114,7 +121,7 @@ export default function AdminPlacePage() {
   const fetchPlaces = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(API_BASE_URL, {
+      const res = await axios.get(`${API_BASE_URL}?limit=all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data.success) setPlaces(res.data.data);
@@ -148,15 +155,19 @@ export default function AdminPlacePage() {
     const addressToSearch = formData.address || formData.name;
 
     if (!addressToSearch) {
-      alert(
-        "Vui lòng nhập Tên địa điểm hoặc Địa chỉ trước để hệ thống tìm kiếm!",
-      );
+      setModal({
+        isOpen: true,
+        title: "Thiếu thông tin",
+        message:
+          "Vui lòng nhập Tên địa điểm hoặc Địa chỉ trước để hệ thống tìm kiếm!",
+        type: "warning",
+        isAlertOnly: true,
+      });
       return;
     }
 
     setIsFetchingLocation(true);
     try {
-      // Ưu tiên tìm trong khu vực Đà Nẵng
       const query = encodeURIComponent(`${addressToSearch}, Đà Nẵng, Việt Nam`);
       const res = await axios.get(
         `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`,
@@ -170,13 +181,24 @@ export default function AdminPlacePage() {
           lng: parseFloat(lon).toFixed(5),
         }));
       } else {
-        alert(
-          "Không tìm thấy tọa độ tự động! Hãy thử ghi địa chỉ rõ ràng hơn (VD: 02 Bạch Đằng) hoặc nhập tay.",
-        );
+        setModal({
+          isOpen: true,
+          title: "Không tìm thấy",
+          message:
+            "Không tìm thấy tọa độ tự động! Hãy thử ghi địa chỉ rõ ràng hơn (VD: 02 Bạch Đằng) hoặc nhập tay.",
+          type: "warning",
+          isAlertOnly: true,
+        });
       }
     } catch (error) {
       console.error("Lỗi API Geocoding:", error);
-      alert("Lỗi kết nối khi lấy tọa độ.");
+      setModal({
+        isOpen: true,
+        title: "Lỗi kết nối",
+        message: "Đã xảy ra lỗi khi lấy tọa độ từ máy chủ bản đồ.",
+        type: "danger",
+        isAlertOnly: true,
+      });
     } finally {
       setIsFetchingLocation(false);
     }
@@ -188,6 +210,21 @@ export default function AdminPlacePage() {
   const handleAddPlace = async (e) => {
     e.preventDefault();
     try {
+      // (Đoạn code kiểm tra minPrice, maxPrice và tạo payload giữ nguyên...)
+      const minP = Number(formData.minPrice) || 0;
+      const maxP = Number(formData.maxPrice) || 0;
+
+      if (minP > 0 && maxP > 0 && minP > maxP) {
+        setModal({
+          isOpen: true,
+          title: "Lỗi dữ liệu",
+          message: "Giá Min không được lớn hơn Giá Max!",
+          type: "danger",
+          isAlertOnly: true,
+        });
+        return;
+      }
+
       const token = localStorage.getItem("token");
 
       const payload = {
@@ -195,18 +232,17 @@ export default function AdminPlacePage() {
         category: formData.category,
         address: formData.address,
         phone: formData.phone,
-        minPrice: Number(formData.minPrice) || 0,
-        maxPrice: Number(formData.maxPrice) || 0,
+        minPrice: minP,
+        maxPrice: maxP,
         description: formData.description,
         image: formData.image,
-        tags: formData.tags, // Dùng trực tiếp mảng
+        tags: formData.tags,
         location: {
           type: "Point",
           coordinates: [parseFloat(formData.lng), parseFloat(formData.lat)],
         },
       };
 
-      // Rẽ nhánh dữ liệu theo Discriminator Mongoose
       if (formData.category === "hotel") {
         payload.amenities = formData.amenities
           .split(",")
@@ -217,7 +253,10 @@ export default function AdminPlacePage() {
         payload.serviceType = formData.serviceType;
       } else if (formData.category === "attraction") {
         payload.ticketPrice = Number(formData.ticketPrice) || 0;
-        payload.tourDuration = formData.tourDuration;
+        const durationRaw = formData.tourDuration
+          .toString()
+          .replace(/[^0-9]/g, "");
+        payload.tourDuration = parseInt(durationRaw, 10) || 60;
         payload.historicalInfo = formData.historicalInfo;
         payload.rules = formData.rules;
         payload.activities = formData.activities
@@ -235,11 +274,18 @@ export default function AdminPlacePage() {
 
       if (res.data.success) {
         setIsAddModalOpen(false);
-        setIsTagDropdownOpen(false); // Reset luôn menu dropdown
+        setIsTagDropdownOpen(false);
         fetchPlaces();
-        alert("Thêm địa điểm thành công!");
 
-        // Trả Form về trạng thái mặc định
+        // GỌI MODAL THÀNH CÔNG THAY VÌ ALERT
+        setModal({
+          isOpen: true,
+          title: "Thành công",
+          message: "Đã thêm địa điểm mới vào hệ thống Danasoul!",
+          type: "success",
+          isAlertOnly: true,
+        });
+
         setFormData({
           name: "",
           category: "attraction",
@@ -265,11 +311,16 @@ export default function AdminPlacePage() {
         });
       }
     } catch (err) {
-      alert(
-        "Lỗi: " +
-          (err.response?.data?.message ||
-            "Không thể lưu. Kiểm tra lại dữ liệu."),
-      );
+      // GỌI MODAL LỖI THAY VÌ ALERT
+      setModal({
+        isOpen: true,
+        title: "Thất bại",
+        message:
+          err.response?.data?.message ||
+          "Không thể lưu. Vui lòng kiểm tra lại dữ liệu.",
+        type: "danger",
+        isAlertOnly: true,
+      });
     }
   };
 
@@ -393,7 +444,7 @@ export default function AdminPlacePage() {
               </span>
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#C4391D] hover:bg-[#a02e16] text-white px-6 py-3.5 rounded-xl font-bold text-sm transition-all shadow-md shadow-red-500/20"
+                className="cursor-pointer xflex-1 md:flex-none flex items-center justify-center gap-2 bg-[#C4391D] hover:bg-[#a02e16] text-white px-6 py-3.5 rounded-xl font-bold text-sm transition-all shadow-md shadow-red-500/20"
               >
                 <svg
                   className="w-5 h-5"
@@ -681,7 +732,7 @@ export default function AdminPlacePage() {
         {/* ========================================== */}
         {isAddModalOpen && (
           <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-[30px] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-[30px] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <form onSubmit={handleAddPlace}>
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
                   <div>
@@ -932,15 +983,15 @@ export default function AdminPlacePage() {
                           Giá Min (VNĐ)
                         </label>
                         <input
-                          type="number"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-1 outline-none"
-                          value={formData.minPrice}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              minPrice: e.target.value,
-                            })
-                          }
+                          type="text"
+                          placeholder="VD: 50.000"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-1 outline-none focus:border-[#002045]"
+                          value={formatCurrency(formData.minPrice)}
+                          onChange={(e) => {
+                            // Khi gõ, xóa dấu chấm đi để lưu vào state là số nguyên (String chứa số)
+                            const rawValue = e.target.value.replace(/\./g, "");
+                            setFormData({ ...formData, minPrice: rawValue });
+                          }}
                         />
                       </div>
                       <div>
@@ -948,15 +999,14 @@ export default function AdminPlacePage() {
                           Giá Max (VNĐ)
                         </label>
                         <input
-                          type="number"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-1 outline-none"
-                          value={formData.maxPrice}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              maxPrice: e.target.value,
-                            })
-                          }
+                          type="text"
+                          placeholder="VD: 2.755.000"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-1 outline-none focus:border-[#002045]"
+                          value={formatCurrency(formData.maxPrice)}
+                          onChange={(e) => {
+                            const rawValue = e.target.value.replace(/\./g, "");
+                            setFormData({ ...formData, maxPrice: rawValue });
+                          }}
                         />
                       </div>
                     </div>
@@ -1257,6 +1307,107 @@ export default function AdminPlacePage() {
                     <button
                       onClick={() => setModal({ ...modal, isOpen: false })}
                       className="flex-1 py-3 rounded-xl font-bold text-[13px] bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors shadow-sm"
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      onClick={modal.onConfirm}
+                      className="flex-1 py-3 rounded-xl font-bold text-[13px] text-white bg-red-600 hover:bg-red-700 shadow-md transition-colors"
+                    >
+                      Xác nhận Xóa
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {modal.isOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-[24px] shadow-2xl w-[90%] max-w-[400px] overflow-hidden flex flex-col transform transition-all scale-100 animate-in fade-in zoom-in duration-200">
+              <div className="p-8 flex flex-col items-center text-center">
+                {/* Đổi màu và Icon dựa theo type của Modal */}
+                <div
+                  className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 ${
+                    modal.type === "success"
+                      ? "bg-emerald-50 text-emerald-500"
+                      : modal.type === "warning"
+                        ? "bg-amber-50 text-amber-500"
+                        : "bg-red-50 text-red-500"
+                  }`}
+                >
+                  {modal.type === "success" ? (
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : modal.type === "warning" ? (
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  )}
+                </div>
+
+                <h3 className="text-[19px] font-black text-slate-800 mb-2.5">
+                  {modal.title}
+                </h3>
+                <p className="text-slate-500 font-medium text-[14px] leading-relaxed">
+                  {modal.message}
+                </p>
+              </div>
+
+              <div className="bg-slate-50 px-6 py-5 flex items-center justify-center gap-3 border-t border-slate-100">
+                {modal.isAlertOnly ? (
+                  <button
+                    onClick={() => setModal({ ...modal, isOpen: false })}
+                    className={`w-full py-3 rounded-xl font-bold text-[13px] text-white shadow-md transition-colors ${
+                      modal.type === "success"
+                        ? "bg-emerald-500 hover:bg-emerald-600"
+                        : modal.type === "warning"
+                          ? "bg-amber-500 hover:bg-amber-600"
+                          : "bg-red-500 hover:bg-red-600"
+                    }`}
+                  >
+                    Đóng
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setModal({ ...modal, isOpen: false })}
+                      className="flex-1 py-3 rounded-xl font-bold text-[13px] bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 shadow-sm transition-colors"
                     >
                       Hủy bỏ
                     </button>

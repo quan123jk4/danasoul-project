@@ -278,6 +278,7 @@ export default function AdminHomePage() {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        allowDecimals={false}
                       />
                       <Tooltip
                         contentStyle={{
@@ -410,8 +411,15 @@ export default function AdminHomePage() {
             <div className="bg-white rounded-[20px] shadow-sm border border-slate-100 overflow-hidden lg:col-span-2 flex flex-col">
               <div className="p-8 border-b border-slate-100 flex justify-between items-center">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  📝 Review Mới Cần Duyệt
+                  📝 Review Mới Nhất
                 </h2>
+                {/* Thêm link nhỏ nhảy sang trang quản lý Review */}
+                <a
+                  href="/admin/reviews"
+                  className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  Xem chi tiết &rarr;
+                </a>
               </div>
               <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left text-sm text-slate-600">
@@ -420,7 +428,8 @@ export default function AdminHomePage() {
                       <th className="px-8 py-5">Người dùng</th>
                       <th className="px-8 py-5">Địa điểm</th>
                       <th className="px-8 py-5">Nội dung đánh giá</th>
-                      <th className="px-8 py-5 text-center">Thao tác</th>
+                      <th className="px-8 py-5 text-right">Thời gian</th>{" "}
+                      {/* Đổi tên cột */}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -448,13 +457,13 @@ export default function AdminHomePage() {
                           <td className="px-8 py-5 max-w-[250px] truncate text-slate-500 font-medium">
                             {fb.comment}
                           </td>
-                          <td className="px-8 py-5 text-center">
-                            <button className="px-4 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white font-bold text-xs rounded-lg mr-2 transition-colors">
-                              Duyệt
-                            </button>
-                            <button className="px-4 py-1.5 bg-slate-100 text-slate-500 hover:bg-red-600 hover:text-white font-bold text-xs rounded-lg transition-colors">
-                              Xóa
-                            </button>
+                          {/* Đổi 2 cái nút thành hiển thị thời gian */}
+                          <td className="px-8 py-5 text-right text-xs font-bold text-slate-400">
+                            {fb.createdAt
+                              ? new Date(fb.createdAt).toLocaleDateString(
+                                  "vi-VN",
+                                )
+                              : "Gần đây"}
                           </td>
                         </tr>
                       ))

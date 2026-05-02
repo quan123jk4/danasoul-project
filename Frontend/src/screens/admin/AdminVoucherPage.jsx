@@ -29,10 +29,12 @@ export default function AdminVoucherPage() {
   const [formData, setFormData] = useState({
     title: "",
     code: "",
-    discount: "",
+    discountValue: "",
+    partnerName: "",
     pointsRequired: "",
     quantity: "",
     expirationDate: "",
+    category: "Ẩm thực", // Thêm trường này, mặc định là Ẩm thực
   });
 
   // === KHAI BÁO LINK API TỪ BACKEND CỦA ÔNG ===
@@ -93,13 +95,14 @@ export default function AdminVoucherPage() {
       const payload = {
         title: formData.title,
         code: formData.code,
-        discount: formData.discount,
+        discountValue: formData.discountValue,
+        partnerName: formData.partnerName,
         pointsRequired: Number(formData.pointsRequired),
         quantity: Number(formData.quantity),
         expirationDate: formData.expirationDate,
-        isActive: true, // Mặc định vừa tạo ra là được phép dùng
+        category: formData.category, // BỔ SUNG DÒNG NÀY
+        isActive: true,
       };
-
       const res = await axios.post(API_CREATE_VOUCHER, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -114,6 +117,9 @@ export default function AdminVoucherPage() {
           pointsRequired: "",
           quantity: "",
           expirationDate: "",
+          discountValue: "",
+          partnerName: "",
+          category: "Ẩm thực",
         });
         setModal({
           isOpen: true,
@@ -149,30 +155,50 @@ export default function AdminVoucherPage() {
     });
   };
 
+  // === XÓA VOUCHER BẰNG API THẬT ===
   const executeDelete = async (id) => {
+    // Đóng cái modal xác nhận trước
     setModal({ ...modal, isOpen: false });
-    // HIỆN TẠI BACKEND CHƯA CÓ API XÓA, NÊN HIỆN CẢNH BÁO BẢO TRÌ
-    setTimeout(() => {
-      setModal({
-        isOpen: true,
-        title: "Tính năng đang bảo trì",
-        message:
-          "Vui lòng viết thêm API Xóa (DELETE) ở Backend để dùng chức năng này!",
-        type: "warning",
-        isAlertOnly: true,
-      });
-    }, 300);
 
-    /* MỞ CODE DƯỚI ĐÂY KHI ÔNG VIẾT XONG API DELETE BÊN NODE.JS
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/v1/vouchers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setVouchers(vouchers.filter(v => v._id !== id));
-      setTimeout(() => setModal({ isOpen: true, title: "Đã xóa", message: "Voucher đã được thu hồi.", type: "success", isAlertOnly: true }), 300);
+
+      // Gọi API DELETE xuống Backend
+      const res = await axios.delete(
+        `http://localhost:5000/api/v1/vouchers/admin/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (res.data.success) {
+        // Xóa thành công thì lọc cái voucher đó ra khỏi state (để nó biến mất trên màn hình lập tức)
+        setVouchers(vouchers.filter((v) => v._id !== id));
+
+        // Hiện popup báo thành công
+        setTimeout(() => {
+          setModal({
+            isOpen: true,
+            title: "Đã xóa",
+            message: "Voucher đã được thu hồi và xóa khỏi hệ thống.",
+            type: "success",
+            isAlertOnly: true,
+          });
+        }, 300);
+      }
     } catch (err) {
-      setTimeout(() => setModal({ isOpen: true, title: "Lỗi", message: "Không thể xóa.", type: "danger", isAlertOnly: true }), 300);
+      console.error(err);
+      // Hiện popup báo lỗi nếu Backend chửi
+      setTimeout(() => {
+        setModal({
+          isOpen: true,
+          title: "Lỗi",
+          message: err.response?.data?.message || "Không thể xóa Voucher này.",
+          type: "danger",
+          isAlertOnly: true,
+        });
+      }, 300);
     }
-    */
   };
 
   // === LỌC & PHÂN TRANG ===
@@ -622,6 +648,62 @@ export default function AdminVoucherPage() {
                       value={formData.title}
                       onChange={(e) =>
                         setFormData({ ...formData, title: e.target.value })
+                      }
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-[#002045] focus:bg-white transition-colors font-medium text-slate-700"
+                    />
+                  </div>
+                  {/* Ô CHỌN DANH MỤC */}
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 block mb-2">
+                      Danh mục (*)
+                    </label>
+                    <select
+                      required
+                      value={formData.category}
+                      onChange={(e) =>
+                        setFormData({ ...formData, category: e.target.value })
+                      }
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-[#002045] focus:bg-white transition-colors font-medium text-slate-700 cursor-pointer"
+                    >
+                      <option value="Ẩm thực">🍔 Ẩm thực</option>
+                      <option value="Khách sạn">🏨 Khách sạn</option>
+                      <option value="Giải trí">🎡 Giải trí</option>
+                      <option value="Di chuyển">🚕 Di chuyển</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 block mb-2">
+                      Đối tác / Cửa hàng (*)
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="VD: Highland Coffee"
+                      value={formData.partnerName}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          partnerName: e.target.value,
+                        })
+                      }
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-[#002045] focus:bg-white transition-colors font-medium text-slate-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 block mb-2">
+                      Giá trị giảm (*)
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      placeholder="VD: 50000 (VND) hoặc 20 (%)"
+                      value={formData.discountValue}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          discountValue: e.target.value,
+                        })
                       }
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-[#002045] focus:bg-white transition-colors font-medium text-slate-700"
                     />
